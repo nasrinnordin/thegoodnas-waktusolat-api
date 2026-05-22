@@ -1,8 +1,7 @@
 import urllib.request
+import urllib.parse
 import json
-import os
 
-# Senarai penuh 60 Zon JAKIM
 zones = [
     "JHR01", "JHR02", "JHR03", "JHR04",
     "KDH01", "KDH02", "KDH03", "KDH04", "KDH05", "KDH06", "KDH07",
@@ -18,6 +17,12 @@ zones = [
     "WLY01", "WLY02"
 ]
 
+month_map = {
+    "Jan": "Jan", "Feb": "Feb", "Mar": "Mac", "Apr": "Apr",
+    "May": "Mei", "Jun": "Jun", "Jul": "Jul", "Aug": "Ogo",
+    "Sep": "Sep", "Oct": "Okt", "Nov": "Nov", "Dec": "Dis"
+}
+
 def format_ampm(time_24):
     h, m = map(int, time_24.split(':'))
     period = "pm" if h >= 12 else "am"
@@ -26,18 +31,30 @@ def format_ampm(time_24):
     return f"{h_12}:{m:02d} {period}"
 
 headers = {'User-Agent': 'Mozilla/5.0'}
+url = "https://www.e-solat.gov.my/index.php?r=esolatApi/TakwimSolat"
 
 for zone in zones:
-    url = f"https://www.e-solat.gov.my/index.php?r=esolatApi/TakwimSolat&period=year&zone={zone}"
     try:
-        req = urllib.request.Request(url, headers=headers)
+        # Menghantar POST request yang sah ke server JAKIM
+        post_data = urllib.parse.urlencode({'period': 'year', 'zone': zone}).encode('utf-8')
+        req = urllib.request.Request(url, data=post_data, headers=headers)
+        
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode('utf-8'))
             
+            if 'prayerTime' not in data:
+                continue
+                
             formatted_data = []
             for item in data['prayerTime']:
+                # Tukar nama bulan Inggeris ke format Melayu (Cth: May -> Mei)
+                parts = item["date"].split('-')
+                if len(parts) == 3:
+                    parts[1] = month_map.get(parts[1], parts[1])
+                malay_date = "-".join(parts)
+
                 formatted_data.append({
-                    "Tarikh Miladi": item["date"],
+                    "Tarikh Miladi": malay_date,
                     "Imsak": format_ampm(item["imsak"][:5]),
                     "Subuh": format_ampm(item["fajr"][:5]),
                     "Zohor": format_ampm(item["dhuhr"][:5]),
@@ -48,7 +65,6 @@ for zone in zones:
             
             with open(f"{zone}.json", "w") as f:
                 json.dump(formatted_data, f, indent=2)
-            
             print(f"Berjaya ditarik: {zone}")
     except Exception as e:
         print(f"Ralat untuk {zone}: {e}")
