@@ -2,7 +2,7 @@ name: Auto Update Waktu Solat
 
 on:
   schedule:
-    - cron: '0 0 1 1 *' 
+    - cron: '0 16 31 12 *' # Berjalan tepat jam 12:00 malam, 1 Jan waktu Malaysia
   workflow_dispatch: 
 
 permissions:
