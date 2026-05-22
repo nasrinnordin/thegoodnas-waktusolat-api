@@ -1,0 +1,35 @@
+name: Auto Update Waktu Solat
+
+on:
+  schedule:
+    - cron: '0 0 1 1 *' 
+  workflow_dispatch: 
+
+permissions:
+  contents: write
+
+jobs:
+  sedut-data-jakim:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Muat turun fail repositori
+        uses: actions/checkout@v3
+
+      - name: Pasang Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Padam semua fail JSON lama (Pembersihan)
+        run: rm -f *.json
+
+      - name: Jalankan Skrip Tarik Data
+        run: python fetch_jakim.py
+
+      - name: Simpan 60 Fail JSON ke GitHub
+        run: |
+          git config --global user.name 'Robot TheGoodNas'
+          git config --global user.email 'robot@thegoodnas.com'
+          git add *.json
+          git commit -m "Auto-update & bersihkan 60 zon waktu solat dari JAKIM" || echo "Tiada perubahan"
+          git push
