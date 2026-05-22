@@ -1,5 +1,4 @@
 import urllib.request
-import urllib.parse
 import json
 
 zones = [
@@ -17,6 +16,7 @@ zones = [
     "WLY01", "WLY02"
 ]
 
+# Kamus untuk terjemah nama bulan JAKIM ke ejaan Melayu TheGoodNas
 month_map = {
     "Jan": "Jan", "Feb": "Feb", "Mar": "Mac", "Apr": "Apr",
     "May": "Mei", "Jun": "Jun", "Jul": "Jul", "Aug": "Ogo",
@@ -30,24 +30,28 @@ def format_ampm(time_24):
     h_12 = 12 if h_12 == 0 else h_12
     return f"{h_12}:{m:02d} {period}"
 
-headers = {'User-Agent': 'Mozilla/5.0'}
-url = "https://www.e-solat.gov.my/index.php?r=esolatApi/TakwimSolat"
+# Tipu server sikit supaya dia ingat kita pakai Google Chrome
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': 'application/json'
+}
 
 for zone in zones:
+    # URL yang Nasrin jumpa yang terbukti berfungsi!
+    url = f"https://www.e-solat.gov.my/index.php?r=esolatApi/TakwimSolat&period=year&zone={zone}"
+    
     try:
-        # Menghantar POST request yang sah ke server JAKIM
-        post_data = urllib.parse.urlencode({'period': 'year', 'zone': zone}).encode('utf-8')
-        req = urllib.request.Request(url, data=post_data, headers=headers)
-        
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode('utf-8'))
             
             if 'prayerTime' not in data:
+                print(f"Tiada data untuk {zone}")
                 continue
                 
             formatted_data = []
             for item in data['prayerTime']:
-                # Tukar nama bulan Inggeris ke format Melayu (Cth: May -> Mei)
+                # Proses terjemahan tarikh
                 parts = item["date"].split('-')
                 if len(parts) == 3:
                     parts[1] = month_map.get(parts[1], parts[1])
@@ -66,5 +70,7 @@ for zone in zones:
             with open(f"{zone}.json", "w") as f:
                 json.dump(formatted_data, f, indent=2)
             print(f"Berjaya ditarik: {zone}")
+            
     except Exception as e:
-        print(f"Ralat untuk {zone}: {e}")
+        print(f"CRITICAL ERROR pada {zone}: {e}")
+        raise e # Sengaja matikan sistem supaya GitHub keluar ralat MERAH kalau ada masalah
